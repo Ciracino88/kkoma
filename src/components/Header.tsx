@@ -2,6 +2,10 @@ import { HardDrive, Upload } from 'lucide-react'
 import { formatBytes } from '../lib'
 import { MONO } from './shared'
 
+// 네이버 밴드 링크 — URL 이 정해지면 여기에 넣으세요 (예: 'https://band.us/band/xxxx').
+// 비어 있으면 "준비 중" 상태로 표시됩니다.
+const BAND_URL = ''
+
 interface HeaderProps {
   storageUsed: number
   onUpload: () => void
@@ -22,6 +26,21 @@ export function Header({ storageUsed, onUpload }: HeaderProps) {
         </span>
       </div>
       <div className="flex items-center gap-4">
+        <a
+          href={BAND_URL || undefined}
+          target={BAND_URL ? '_blank' : undefined}
+          rel="noreferrer"
+          aria-disabled={BAND_URL ? undefined : true}
+          title={BAND_URL ? '네이버 밴드로 이동' : '네이버 밴드 링크 준비 중'}
+          className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+            BAND_URL
+              ? 'text-foreground bg-secondary hover:bg-secondary/70 cursor-pointer'
+              : 'text-muted-foreground bg-secondary/60 cursor-default'
+          }`}
+        >
+          <img src="/band-icon.svg" alt="" className="w-4 h-4" />
+          밴드
+        </a>
         <div className="text-xs text-muted-foreground hidden sm:flex items-center gap-1.5 bg-secondary px-3 py-1.5 rounded-full">
           <HardDrive className="w-3.5 h-3.5" />
           <span style={MONO}>{formatBytes(storageUsed)} 사용 중</span>
