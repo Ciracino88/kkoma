@@ -1,0 +1,7 @@
+# 로컬 개발용 시크릿. 이 파일을 복사해서 `.dev.vars` 로 저장하고 값을 채우세요.
+#   cp .dev.vars.example .dev.vars
+# .dev.vars 는 .gitignore 에 포함되어 커밋되지 않습니다.
+
+# Cloudflare R2 > "Manage R2 API Tokens" 에서 생성한 S3 호환 액세스 키
+R2_ACCESS_KEY_ID=""
+R2_SECRET_ACCESS_KEY=""
