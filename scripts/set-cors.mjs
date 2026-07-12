@@ -5,7 +5,7 @@
 //   node scripts/set-cors.mjs                 # 모든 origin(*) 허용
 //   node scripts/set-cors.mjs https://내도메인.com   # 특정 origin 만 허용
 //
-// 자격증명은 .dev.vars 또는 환경변수에서 읽습니다:
+// 자격증명은 .env.local 또는 환경변수에서 읽습니다:
 //   R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
 
 import crypto from 'node:crypto'
@@ -16,9 +16,9 @@ import { AwsClient } from 'aws4fetch'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-/** .dev.vars (KEY=VALUE 형식) 파싱 */
-function loadDevVars() {
-  const p = join(root, '.dev.vars')
+/** .env / .env.local (KEY=VALUE 형식) 파싱 */
+function loadEnvFile(name) {
+  const p = join(root, name)
   const out = {}
   if (!existsSync(p)) return out
   for (const line of readFileSync(p, 'utf8').split('\n')) {
@@ -36,22 +36,7 @@ function loadDevVars() {
   return out
 }
 
-/** wrangler.jsonc 의 vars 에서 값 추출 (주석 제거 후 정규식) */
-function loadWranglerVars() {
-  const p = join(root, 'wrangler.jsonc')
-  const out = {}
-  if (!existsSync(p)) return out
-  const text = readFileSync(p, 'utf8').replace(/\/\/.*$/gm, '')
-  for (const key of ['R2_ACCOUNT_ID', 'R2_BUCKET_NAME']) {
-    const m = new RegExp(`"${key}"\\s*:\\s*"([^"]*)"`).exec(text)
-    if (m && m[1]) out[key] = m[1]
-  }
-  return out
-}
-
-const devVars = loadDevVars()
-const wranglerVars = loadWranglerVars()
-const cfg = { ...wranglerVars, ...devVars, ...process.env }
+const cfg = { ...loadEnvFile('.env'), ...loadEnvFile('.env.local'), ...process.env }
 
 const accountId = cfg.R2_ACCOUNT_ID
 const bucket = cfg.R2_BUCKET_NAME
@@ -69,7 +54,7 @@ const missing = Object.entries({
 
 if (missing.length) {
   console.error(`❌ 다음 값이 없습니다: ${missing.join(', ')}`)
-  console.error('   .dev.vars 와 wrangler.jsonc(R2_ACCOUNT_ID) 를 확인하세요.')
+  console.error('   .env.local 을 확인하세요.')
   process.exit(1)
 }
 

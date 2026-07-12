@@ -1,107 +1,110 @@
 # kkoma
 
-Cloudflare **Workers + R2** 기반 mp3 · mp4 업로드 / 재생 / 다운로드 웹사이트.
+**Vercel + Cloudflare R2** 기반 mp3 · mp4 업로드 / 재생 / 다운로드 웹사이트.
 
-- **프론트엔드**: React + TypeScript + Vite
-- **백엔드**: Cloudflare Worker (`worker/index.ts`)
-- **저장소**: Cloudflare R2
-- 큰 파일(최대 5GB)은 브라우저가 **presigned URL** 로 R2 에 직접 업로드 → Worker 100MB 요청 제한 우회
-- 다운로드 / 재생은 Worker 가 R2 에서 **스트리밍(Range 지원)** 으로 제공
+- **프론트엔드**: React + TypeScript + Vite + Tailwind v4 (Vercel 정적 호스팅)
+- **백엔드**: Vercel 서버리스 함수 (`api/`)
+- **저장소**: Cloudflare R2 (S3 호환 API로 접근)
+- 큰 파일(최대 5GB)은 브라우저가 **presigned URL** 로 R2 에 직접 업로드/다운로드 → 서버리스 함수로 대용량 트래픽이 지나가지 않음
 
 ## 아키텍처
 
 ```
-브라우저 ──(1) POST /api/presign──▶ Worker ──서명──▶ presigned PUT URL
-        ──(2) PUT 파일──────────────────────────▶ R2 (직접 업로드)
-        ──(3) GET /api/files────────▶ Worker ──list──▶ R2   (목록)
-        ──(4) GET /api/file/<key>───▶ Worker ──get───▶ R2   (스트리밍/다운로드)
+브라우저 ─(1) POST /api/presign──▶ Vercel 함수 ─서명─▶ presigned PUT URL
+        ─(2) PUT 파일───────────────────────────────▶ R2 (직접 업로드)
+        ─(3) GET /api/files─────────▶ Vercel 함수 ─list─▶ R2 (목록)
+        ─(4) GET /api/file?key=─────▶ Vercel 함수 ─302─▶ presigned GET URL ─▶ R2 (재생/다운로드)
 ```
 
 | 메서드 | 경로 | 설명 |
 | --- | --- | --- |
-| `POST` | `/api/presign` | `{filename, size}` → presigned 업로드 URL 발급 (mp3/mp4, ≤5GB) |
-| `GET` | `/api/files` | 업로드된 파일 목록 |
-| `GET` | `/api/file/<key>` | 스트리밍 재생 (Range 지원) |
-| `GET` | `/api/file/<key>?download=1` | 첨부파일 다운로드 |
-| `DELETE` | `/api/file/<key>` | 삭제 |
+| `POST` | `/api/presign` | `{filename, size}` → presigned 업로드 URL (mp3/mp4, ≤5GB) |
+| `GET` | `/api/files` | 업로드된 파일 목록 (S3 ListObjectsV2) |
+| `GET` | `/api/file?key=<key>` | presigned GET 으로 302 리다이렉트 (재생, Range 지원) |
+| `GET` | `/api/file?key=<key>&download=1` | 첨부파일 다운로드 |
+| `DELETE` | `/api/file?key=<key>` | 삭제 |
 
-> ⚠️ 현재 인증이 없는 **완전 공개** 앱입니다. 누구나 업로드/다운로드/삭제할 수 있습니다.
-
----
-
-## 사전 준비 (Cloudflare)
-
-1. **R2 버킷 생성**
-   - 대시보드 → R2 → *Create bucket* → 이름 `kkoma`
-     (다른 이름을 쓰려면 `wrangler.jsonc` 의 `bucket_name` 과 `R2_BUCKET_NAME` 을 함께 수정)
-
-2. **Account ID 확인**
-   - R2 개요 페이지의 *Account ID* 를 복사해 `wrangler.jsonc` 의 `vars.R2_ACCOUNT_ID` 에 입력
-
-3. **R2 API 토큰(S3 자격증명) 생성**
-   - R2 → *Manage R2 API Tokens* → *Create API Token* (권한: Object Read & Write)
-   - 발급된 **Access Key ID / Secret Access Key** 를 아래에서 사용
+> ⚠️ 인증이 없는 **완전 공개** 앱입니다.
 
 ---
+
+## 사전 준비 (Cloudflare R2)
+
+1. R2 버킷 `kkoma` 생성 (다른 이름을 쓰면 `R2_BUCKET_NAME` 함께 변경)
+2. **Account API 토큰** 발급 (R2 → *Manage R2 API Tokens*, 권한 `Object Read & Write`) → Access Key ID / Secret 확보
+3. R2 버킷 **CORS 허용** (브라우저 직접 업로드에 필수). 대시보드(R2 → 버킷 → Settings → CORS Policy)에 아래 추가하거나 `npm run setup-cors` 실행:
+   ```json
+   [
+     {
+       "AllowedOrigins": ["*"],
+       "AllowedMethods": ["PUT", "GET", "HEAD"],
+       "AllowedHeaders": ["content-type"],
+       "ExposeHeaders": ["ETag"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+## 환경변수
+
+`.env.example` 을 복사해 `.env.local` 을 만들고 값을 채웁니다 (로컬 전용, 커밋 안 됨).
+**Vercel 프로젝트 설정 → Environment Variables** 에도 동일하게 등록하세요.
+
+| 변수 | 설명 |
+| --- | --- |
+| `R2_ACCOUNT_ID` | Cloudflare 계정 ID |
+| `R2_BUCKET_NAME` | R2 버킷 이름 (`kkoma`) |
+| `R2_ACCESS_KEY_ID` | R2 API 토큰의 Access Key ID |
+| `R2_SECRET_ACCESS_KEY` | R2 API 토큰의 Secret Access Key |
 
 ## 로컬 개발
 
 ```bash
 npm install
-
-# 시크릿 설정
-cp .dev.vars.example .dev.vars
-#  .dev.vars 에 R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY 입력
-
-# R2 버킷 CORS 허용 (브라우저 직접 업로드에 필수, 최초 1회)
-npm run setup-cors                    # 모든 origin 허용 (*)
-# 또는 특정 origin 만:  npm run setup-cors https://내도메인.com
-
-npm run dev                           # http://localhost:5173
+cp .env.example .env.local     # 값 채우기
+npm run dev                    # http://localhost:5173 (프론트엔드)
 ```
 
-### 로컬 개발 시 주의
-presigned 업로드는 **항상 실제 R2 버킷**으로 전송됩니다. 반면 목록/다운로드에 쓰이는
-`MEDIA_BUCKET` 바인딩은 기본적으로 **로컬 시뮬레이션 버킷**을 바라봅니다. 따라서 로컬에서
-업로드한 파일이 목록에 안 보일 수 있습니다.
-
-실제 버킷으로 끝까지 테스트하려면 배포(`npm run deploy`) 후 확인하는 것을 권장합니다.
-
----
+> 프론트엔드만 볼 때는 `npm run dev` (Vite). `/api` 함수까지 로컬에서 돌리려면
+> `npm i -g vercel && vercel dev` 를 사용하세요.
 
 ## 배포
 
-```bash
-# 프로덕션 시크릿 등록 (최초 1회)
-npx wrangler secret put R2_ACCESS_KEY_ID
-npx wrangler secret put R2_SECRET_ACCESS_KEY
+### 방법 A — Vercel Git 연동 (가장 간단)
+Vercel 대시보드에서 이 GitHub 저장소를 Import → 환경변수 등록 → 이후 `main` push 시 자동 배포.
 
-# CORS 아직 안 했다면
-npm run setup-cors
+### 방법 B — GitHub Actions (`.github/workflows/deploy.yml`)
+`main` push 시 Actions 가 Vercel CLI 로 배포합니다. GitHub 저장소 Secrets 에 등록 필요:
 
-# 빌드 + 배포
-npm run deploy
-```
+| Secret | 얻는 곳 |
+| --- | --- |
+| `VERCEL_TOKEN` | Vercel → Account Settings → Tokens |
+| `VERCEL_ORG_ID` | `vercel link` 후 `.vercel/project.json` 의 `orgId` |
+| `VERCEL_PROJECT_ID` | 같은 파일의 `projectId` |
 
-배포 후 출력되는 `*.workers.dev` URL 에서 앱을 사용할 수 있습니다.
+> 방법 A와 B를 동시에 쓰면 중복 배포됩니다. Actions 를 쓰려면 Vercel 프로젝트 설정에서
+> Git 자동 배포를 꺼두세요.
 
 ## 스크립트
 
 | 명령 | 설명 |
 | --- | --- |
-| `npm run dev` | 로컬 개발 서버 (Vite + Worker) |
+| `npm run dev` | 로컬 개발 서버 (Vite) |
 | `npm run build` | 타입체크 + 프로덕션 빌드 |
-| `npm run deploy` | 빌드 후 Cloudflare 에 배포 |
 | `npm run setup-cors [origin]` | R2 버킷 CORS 규칙 설정 |
-| `npm run cf-typegen` | Worker 타입 정의 생성 |
 | `npm run lint` | ESLint |
 
 ## 파일 구조
 
 ```
-worker/index.ts      Worker: presign / list / stream / delete + 정적자산 서빙
-src/App.tsx          업로드·목록·재생·삭제 UI
-src/lib.ts           API 클라이언트 + 업로드(진행률) 로직
-scripts/set-cors.mjs R2 버킷 CORS 설정 스크립트
-wrangler.jsonc       Worker / R2 바인딩 / vars 설정
+api/
+├─ _lib.ts          R2(S3 호환) 공용 헬퍼
+├─ presign.ts       presigned 업로드 URL 발급
+├─ files.ts         파일 목록 (ListObjectsV2)
+└─ file.ts          재생/다운로드(302 리다이렉트) · 삭제
+src/
+├─ App.tsx          상태 오케스트레이션
+├─ lib.ts           API 클라이언트 + 업로드(진행률)
+├─ hooks/           useMediaLibrary · useUploads · useToast
+└─ components/       Header · StatCards · UploadDropzone · Toolbar · FileTable · FileRow 등
 ```

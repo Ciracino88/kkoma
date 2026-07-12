@@ -62,7 +62,7 @@ export async function listFiles(): Promise<MediaFile[]> {
 }
 
 export async function deleteFile(key: string): Promise<void> {
-  const res = await fetch(`/api/file/${encodeURIComponent(key)}`, {
+  const res = await fetch(`/api/file?key=${encodeURIComponent(key)}`, {
     method: 'DELETE',
   })
   if (!res.ok && res.status !== 204) throw new Error(await readError(res))
@@ -122,6 +122,6 @@ export async function uploadFile(
 }
 
 export function fileUrl(key: string, download = false): string {
-  const base = `/api/file/${encodeURIComponent(key)}`
-  return download ? `${base}?download=1` : base
+  const base = `/api/file?key=${encodeURIComponent(key)}`
+  return download ? `${base}&download=1` : base
 }
