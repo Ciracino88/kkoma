@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient, displayName, getEnv, objectUrl } from './_lib'
+import { createClient, displayName, getEnv, objectUrl } from './_lib.js'
 
 /**
  * GET  /api/file?key=<key>            → presigned GET 으로 302 리다이렉트 (재생/스트리밍, Range 지원)

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { bucketUrl, createClient, displayName, extOf, getEnv } from './_lib'
+import { bucketUrl, createClient, displayName, extOf, getEnv } from './_lib.js'
 
 const CONTENT_TYPES: Record<string, string> = {
   mp3: 'audio/mpeg',

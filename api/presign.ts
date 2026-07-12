@@ -8,7 +8,7 @@ import {
   getEnv,
   objectUrl,
   sanitizeName,
-} from './_lib'
+} from './_lib.js'
 
 /** POST /api/presign — 브라우저가 R2 로 직접 업로드할 presigned PUT URL 발급 */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
