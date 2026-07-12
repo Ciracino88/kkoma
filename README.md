@@ -1,4 +1,4 @@
-# kkoma 🎵
+# kkoma
 
 Cloudflare **Workers + R2** 기반 mp3 · mp4 업로드 / 재생 / 다운로드 웹사이트.
 
