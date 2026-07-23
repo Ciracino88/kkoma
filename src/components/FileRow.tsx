@@ -1,6 +1,6 @@
 import { Download, Music, Pause, Play, Trash2, Video } from 'lucide-react'
 import { fileUrl, formatBytes, formatDate, isVideo, type MediaFile } from '../lib'
-import { MONO } from './shared'
+import { mediaStyle } from './shared'
 
 interface FileRowProps {
   file: MediaFile
@@ -21,6 +21,7 @@ export function FileRow({
   onDelete,
 }: FileRowProps) {
   const video = isVideo(file)
+  const style = video ? mediaStyle.video : mediaStyle.audio
 
   return (
     <div className={isSelected ? 'bg-primary/5' : 'hover:bg-secondary/40 transition-colors'}>
@@ -32,21 +33,17 @@ export function FileRow({
               isSelected ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/40'
             }`}
           >
-            {isSelected && <div className="w-1.5 h-1.5 bg-white rounded-sm" />}
+            {isSelected && <div className="w-1.5 h-1.5 bg-primary-foreground rounded-sm" />}
           </div>
         </div>
 
         {/* Name */}
         <div className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onClick={onTogglePlay}>
-          <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              video ? 'bg-blue-50' : 'bg-emerald-50'
-            }`}
-          >
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${style.soft}`}>
             {video ? (
-              <Video className="w-4 h-4 text-blue-500" />
+              <Video className={`w-4 h-4 ${style.icon}`} />
             ) : (
-              <Music className="w-4 h-4 text-emerald-500" />
+              <Music className={`w-4 h-4 ${style.icon}`} />
             )}
           </div>
           <div className="min-w-0">
@@ -54,29 +51,22 @@ export function FileRow({
               {file.name}
             </p>
             <div className="flex items-center gap-2 mt-0.5">
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                  video ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'
-                }`}
-                style={MONO}
-              >
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${style.chip}`}>
                 {video ? 'MP4' : 'MP3'}
               </span>
-              <span className="text-xs text-muted-foreground sm:hidden">{formatBytes(file.size)}</span>
+              <span className="text-xs text-muted-foreground sm:hidden tabular-nums">{formatBytes(file.size)}</span>
             </div>
           </div>
         </div>
 
         {/* Size */}
         <div className="w-16 text-right hidden sm:block">
-          <span className="text-xs text-muted-foreground" style={MONO}>
-            {formatBytes(file.size)}
-          </span>
+          <span className="text-xs text-muted-foreground tabular-nums">{formatBytes(file.size)}</span>
         </div>
 
         {/* Date */}
         <div className="w-32 text-right hidden lg:block">
-          <span className="text-xs text-muted-foreground">{formatDate(file.uploaded)}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{formatDate(file.uploaded)}</span>
         </div>
 
         {/* Actions */}
@@ -97,7 +87,7 @@ export function FileRow({
           </a>
           <button
             onClick={onDelete}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive-soft transition-all"
             title="삭제"
           >
             <Trash2 className="w-3.5 h-3.5" />

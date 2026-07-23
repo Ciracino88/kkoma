@@ -3,7 +3,7 @@
 > **목적**: 세션이 바뀌어도 이 문서 하나만 읽으면 프로젝트의 현재 상태·구조·다음 할 일을 파악할 수 있도록 유지하는 인수인계 문서입니다.
 > **갱신 규칙**: 의미 있는 변경(기능 추가, 구조 변경, 배포 방식 변경, 미결 이슈 해결)을 할 때마다 아래 "변경 로그"와 관련 섹션을 갱신하세요.
 >
-> **마지막 갱신**: 2026-07-23 (커밋 `8d141ea` 기준)
+> **마지막 갱신**: 2026-07-23 — 디자인 시스템 정의 (Wanted DS 기반 토큰 + 컴포넌트 표준화)
 
 ---
 
@@ -72,6 +72,16 @@ src/
 │  └─ shared.ts         공용 타입 (Filter 등)
 └─ theme.css            디자인 토큰(색상 변수 등)
 ```
+
+## 5.1 디자인 시스템
+
+임시방편 스타일을 걷어내고 **Wanted Design System 기반 토큰 체계**로 표준화함. 기준 문서는 [docs/DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+
+- **서체**: Pretendard 단일 서체([src/index.css](../src/index.css) CDN 로드). 숫자 정렬은 `tabular-nums`.
+- **색상**: 2단계 토큰(Reference→Semantic). Primary `#0066FF`. 모든 컬러는 [src/theme.css](../src/theme.css)의 CSS 변수 → Tailwind `@theme` 유틸리티로 연결. 컴포넌트는 `bg-card`·`text-success`·`bg-destructive-soft` 등 의미 토큰만 사용.
+- **폰트 크기**: 확정 9단계 — 13(최소)·15(본문)·18·20·24·28·32·36·40(최대). Tailwind `text-*`가 이 스케일로 재정의되어 스케일 밖 크기가 나오지 않음.
+- **파일 유형 색**: MP3=success(green)·MP4=info(blue)·전체=accent(violet), [shared.ts](../src/components/shared.ts)의 `mediaStyle`로 고정.
+- 전 컴포넌트(Header·StatCards·Toolbar·FileTable·FileRow·UploadList·Toast·DragOverlay)를 토큰 기준으로 리팩터링 완료.
 
 ## 6. 배포 & 환경
 

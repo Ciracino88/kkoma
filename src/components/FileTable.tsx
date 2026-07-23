@@ -16,7 +16,7 @@ interface FileTableProps {
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-2xl border border-border">
+    <div className="flex flex-col items-center justify-center py-24 text-center bg-card rounded-2xl border border-border">
       {children}
     </div>
   )
@@ -46,8 +46,8 @@ export function FileTable({
   if (error) {
     return (
       <EmptyState>
-        <AlertCircle className="w-10 h-10 text-red-400 mb-4" />
-        <p className="text-red-500 text-sm">{error}</p>
+        <AlertCircle className="w-10 h-10 text-destructive mb-4" />
+        <p className="text-destructive text-sm">{error}</p>
       </EmptyState>
     )
   }
@@ -64,7 +64,7 @@ export function FileTable({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
       {/* Header row */}
       <div className="hidden sm:grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 items-center px-5 py-3 text-xs text-muted-foreground font-semibold uppercase tracking-widest border-b border-border bg-secondary/40">
         <span className="w-4" />

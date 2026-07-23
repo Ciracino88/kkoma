@@ -110,7 +110,6 @@ export default function App() {
   return (
     <div
       className="min-h-screen bg-background text-foreground"
-      style={{ fontFamily: "'Inter', sans-serif" }}
       onDragOver={(e) => {
         e.preventDefault()
         setIsDragging(true)

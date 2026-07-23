@@ -4,8 +4,8 @@ import { Upload } from 'lucide-react'
 export function DragOverlay({ visible }: { visible: boolean }) {
   if (!visible) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm pointer-events-none">
-      <div className="text-center bg-white rounded-3xl p-12 shadow-2xl border-2 border-dashed border-primary">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-none">
+      <div className="text-center bg-card rounded-3xl p-12 shadow-lg border-2 border-dashed border-primary">
         <Upload className="w-16 h-16 text-primary mx-auto mb-4" />
         <p className="text-2xl font-bold text-primary">파일을 놓으세요</p>
         <p className="text-muted-foreground mt-2">MP3 / MP4 파일 지원</p>

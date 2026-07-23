@@ -1,6 +1,5 @@
 import { Search, Trash2 } from 'lucide-react'
 import type { Filter } from './shared'
-import { MONO } from './shared'
 
 interface ToolbarProps {
   search: string
@@ -32,19 +31,20 @@ export function Toolbar({
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           placeholder="파일 검색..."
-          className="w-full bg-white border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
+          className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
         />
       </div>
 
-      <div className="flex items-center gap-1 bg-white border border-border rounded-xl p-1">
+      <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-1">
         {FILTERS.map((f) => (
           <button
             key={f}
             onClick={() => onFilter(f)}
             className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-              filter === f ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              filter === f
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
-            style={MONO}
           >
             {f === 'all' ? '전체' : f.toUpperCase()}
           </button>
@@ -53,7 +53,7 @@ export function Toolbar({
 
       <button
         onClick={onRefresh}
-        className="px-4 py-2.5 text-xs font-semibold rounded-xl bg-white border border-border text-muted-foreground hover:text-foreground transition-colors"
+        className="px-4 py-2.5 text-xs font-semibold rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground transition-colors"
       >
         새로고침
       </button>
@@ -61,7 +61,7 @@ export function Toolbar({
       {selectedCount > 0 && (
         <button
           onClick={onDeleteSelected}
-          className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-500 px-4 py-2.5 text-xs font-semibold rounded-xl hover:bg-red-100 transition-colors"
+          className="flex items-center gap-2 bg-destructive-soft border border-destructive/20 text-destructive px-4 py-2.5 text-xs font-semibold rounded-xl hover:bg-destructive/15 transition-colors"
         >
           <Trash2 className="w-3.5 h-3.5" />
           {selectedCount}개 삭제
