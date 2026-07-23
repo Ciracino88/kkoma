@@ -28,6 +28,8 @@
 
 > 시사점: 저장 백엔드(R2)는 수단이며 병목이 아니다. 핵심 개발 과제는 **① 브라우저 PPT 렌더링·슬라이드 제어(임베드 영상/애니메이션 포함) ② 투 스크린 프레젠테이션 ③ 플로팅 영상 오버레이 + 주차별 재생목록**.
 
+📐 **설계 초안**: [docs/design/presentation-controller.md](design/presentation-controller.md) (브랜치 `feat/presentation-controller`). 다음 착수 = Phase 0 타당성 프로토타입(슬라이드 렌더러 선택 게이트).
+
 ## 1. 한 줄 요약 (현재 구현 기준)
 
 `kkoma` — **인증 없는 공개** mp3·mp4 업로드 / 재생 / 다운로드 웹사이트 (§0 목표로 진화 중).
