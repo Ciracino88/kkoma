@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Check, FileVideo, Loader2, Music, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Check, FileVideo, Loader2, Music, RefreshCw, Search } from 'lucide-react'
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import coreURL from '@ffmpeg/core?url'
 import wasmURL from '@ffmpeg/core/wasm?url'
@@ -31,6 +31,7 @@ export default function ConvertScreen() {
   const [engine, setEngine] = useState<EngineState>('unloaded')
   const [jobs, setJobs] = useState<Record<string, Job>>({})
   const [busy, setBusy] = useState(false)
+  const [search, setSearch] = useState('')
 
   const ffRef = useRef<FFmpeg | null>(null)
   const currentKeyRef = useRef<string | null>(null)
@@ -125,6 +126,10 @@ export default function ConvertScreen() {
     () => new Set(files.filter((f) => !isVideo(f)).map((f) => baseName(f.name))),
     [files],
   )
+  const visibleMp4s = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return q ? mp4s.filter((f) => f.name.toLowerCase().includes(q)) : mp4s
+  }, [mp4s, search])
 
   const runAll = useCallback(async () => {
     if (busy) return
@@ -176,10 +181,15 @@ export default function ConvertScreen() {
       </header>
 
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6">
-        <p className="text-sm text-muted-foreground mb-4">
-          R2에 올라온 mp4의 소리만 뽑아 mp3로 만들고, 다시 R2에 올립니다. 변환은 브라우저에서
-          진행되며(서버 없음), 완료된 mp3는 예배 음악 목록에 바로 나타납니다.
-        </p>
+        <div className="relative mb-4">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="mp4 파일 검색..."
+            className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
+          />
+        </div>
 
         {engine === 'loading' && (
           <div className="mb-4 flex items-center gap-2 text-sm text-info bg-info-soft/40 border border-border rounded-xl px-4 py-3">
@@ -194,7 +204,12 @@ export default function ConvertScreen() {
 
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border text-sm font-semibold flex items-center gap-2">
-            <FileVideo className="w-4 h-4 text-info" /> mp4 파일 {mp4s.length > 0 ? `· ${mp4s.length}` : ''}
+            <FileVideo className="w-4 h-4 text-info" /> mp4 파일{' '}
+            {search.trim() && mp4s.length > 0
+              ? `· ${visibleMp4s.length}/${mp4s.length}`
+              : mp4s.length > 0
+                ? `· ${mp4s.length}`
+                : ''}
           </div>
 
           <div className="divide-y divide-border">
@@ -207,8 +222,13 @@ export default function ConvertScreen() {
                 변환할 mp4 파일이 없습니다.
               </p>
             )}
+            {!loading && !error && mp4s.length > 0 && visibleMp4s.length === 0 && (
+              <p className="px-4 py-6 text-sm text-muted-foreground text-center">
+                검색 결과가 없습니다.
+              </p>
+            )}
 
-            {mp4s.map((mp4) => {
+            {visibleMp4s.map((mp4) => {
               const job = jobs[mp4.key]
               const hasMp3 = mp3Bases.has(baseName(mp4.name))
               const running =
