@@ -70,20 +70,13 @@ npm run dev                    # http://localhost:5173 (프론트엔드)
 
 ## 배포
 
-### 방법 A — Vercel Git 연동 (가장 간단)
-Vercel 대시보드에서 이 GitHub 저장소를 Import → 환경변수 등록 → 이후 `main` push 시 자동 배포.
+**Vercel Git 연동**으로 배포합니다. Vercel 대시보드에서 이 GitHub 저장소를 Import →
+환경변수 등록 → 이후 `main` push 시 자동 배포됩니다.
 
-### 방법 B — GitHub Actions (`.github/workflows/deploy.yml`)
-`main` push 시 Actions 가 Vercel CLI 로 배포합니다. GitHub 저장소 Secrets 에 등록 필요:
-
-| Secret | 얻는 곳 |
-| --- | --- |
-| `VERCEL_TOKEN` | Vercel → Account Settings → Tokens |
-| `VERCEL_ORG_ID` | `vercel link` 후 `.vercel/project.json` 의 `orgId` |
-| `VERCEL_PROJECT_ID` | 같은 파일의 `projectId` |
-
-> 방법 A와 B를 동시에 쓰면 중복 배포됩니다. Actions 를 쓰려면 Vercel 프로젝트 설정에서
-> Git 자동 배포를 꺼두세요.
+> 예전에 있던 GitHub Actions 배포 워크플로(`.github/workflows/deploy.yml`)는 Vercel Git
+> 연동과 중복되어 매 push마다 실패만 했으므로 제거했습니다. Actions 로 배포하려면 시크릿
+> (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`)을 등록하고 워크플로를 되살린 뒤,
+> Vercel 프로젝트 설정에서 Git 자동 배포를 꺼 중복을 피하세요.
 
 ## 스크립트
 
