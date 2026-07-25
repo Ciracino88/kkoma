@@ -3,7 +3,7 @@
 > **목적**: 세션이 바뀌어도 이 문서 하나만 읽으면 프로젝트의 현재 상태·구조·다음 할 일을 파악할 수 있도록 유지하는 인수인계 문서입니다.
 > **갱신 규칙**: 의미 있는 변경(기능 추가, 구조 변경, 배포 방식 변경, 미결 이슈 해결)을 할 때마다 아래 "변경 로그"와 관련 섹션을 갱신하세요.
 >
-> **마지막 갱신**: 2026-07-23 — 디자인 시스템 정의 (Wanted DS 기반 토큰 + 컴포넌트 표준화)
+> **마지막 갱신**: 2026-07-25 — 투 스크린 예배 컨트롤러 구현·배포 (Phase 0~2)
 
 ---
 
@@ -28,7 +28,9 @@
 
 > 시사점: 저장 백엔드(R2)는 수단이며 병목이 아니다. 핵심 개발 과제는 **① 브라우저 PPT 렌더링·슬라이드 제어(임베드 영상/애니메이션 포함) ② 투 스크린 프레젠테이션 ③ 플로팅 영상 오버레이 + 주차별 재생목록**.
 
-📐 **설계 초안**: [docs/design/presentation-controller.md](design/presentation-controller.md) (브랜치 `feat/presentation-controller`). 다음 착수 = Phase 0 타당성 프로토타입(슬라이드 렌더러 선택 게이트).
+📐 **설계 + 구현 현황**: [docs/design/presentation-controller.md](design/presentation-controller.md). Phase 0~2 구현·**배포 완료**(Vercel Git). 코드: `src/present/` (`ControlScreen`·`OutputScreen`·`channel`·`useDeck`·`pptx`), 해시 라우트 `#present`(조작)·`#present-output`(출력).
+
+> **다음 세션 시작점**: 설계 문서 §14 "남은 작업/후속" 참고 — 조작 창 썸네일 레일, 영상 종료 후 자동 슬라이드 복귀, 음악 소스로 R2(mp3) 연동, 대형 영상(469MB) 이중 파싱 메모리 최적화. 실제 예배 환경 렌더 피델리티·메모리는 사용자 검증 중.
 
 ## 1. 한 줄 요약 (현재 구현 기준)
 
