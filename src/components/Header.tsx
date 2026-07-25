@@ -1,4 +1,4 @@
-import { HardDrive, MonitorPlay, Upload } from 'lucide-react'
+import { FileAudio, HardDrive, MonitorPlay, Upload } from 'lucide-react'
 import { formatBytes } from '../lib'
 
 // 네이버 밴드 링크 — URL 이 정해지면 여기에 넣으세요 (예: 'https://band.us/band/xxxx').
@@ -30,6 +30,14 @@ export function Header({ storageUsed, onUpload }: HeaderProps) {
         >
           <MonitorPlay className="w-4 h-4" />
           예배 모드
+        </a>
+        <a
+          href="#convert"
+          title="mp4 → mp3 변환"
+          className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors text-foreground bg-secondary hover:bg-secondary/70"
+        >
+          <FileAudio className="w-4 h-4" />
+          mp3 변환
         </a>
         <a
           href={BAND_URL || undefined}

@@ -6,10 +6,13 @@ import App from './App.tsx'
 // 예배 모드는 pptx 렌더러(대용량)를 쓰므로 지연 로딩 — 라이브러리 화면은 가볍게 유지.
 const ControlScreen = lazy(() => import('./present/ControlScreen.tsx'))
 const OutputScreen = lazy(() => import('./present/OutputScreen.tsx'))
+// ffmpeg.wasm(대용량)을 쓰므로 지연 로딩.
+const ConvertScreen = lazy(() => import('./convert/ConvertScreen.tsx'))
 
 // 가벼운 해시 라우팅:
 //   #present-output → 1스크린(대중용 출력)
 //   #present        → 2스크린(조작)
+//   #convert        → mp4 → mp3 변환
 //   그 외           → 파일 라이브러리
 function subscribe(cb: () => void) {
   window.addEventListener('hashchange', cb)
@@ -23,6 +26,9 @@ function Root() {
   }
   if (hash.startsWith('#present')) {
     return <Suspense fallback={fallback}><ControlScreen /></Suspense>
+  }
+  if (hash.startsWith('#convert')) {
+    return <Suspense fallback={fallback}><ConvertScreen /></Suspense>
   }
   return <App />
 }
