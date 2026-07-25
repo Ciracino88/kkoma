@@ -11,8 +11,10 @@
     "setup-cors": "node scripts/set-cors.mjs"
   },
   "dependencies": {
+    "@aiden0z/pptx-renderer": "^1.2.4",
     "@tailwindcss/vite": "^4.3.2",
     "aws4fetch": "^1.0.20",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
