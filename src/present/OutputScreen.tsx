@@ -10,7 +10,6 @@ import { usePresentChannel, type PresentMsg } from './channel'
 export default function OutputScreen() {
   const stageRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
-  const musicUrlRef = useRef<string | null>(null)
 
   const [file, setFile] = useState<File | null>(null)
   const [video, setVideo] = useState<{ url: string; label: string } | null>(null)
@@ -40,11 +39,8 @@ export default function OutputScreen() {
           setVideo(null)
           break
         case 'MUSIC_PLAY': {
-          if (musicUrlRef.current) URL.revokeObjectURL(musicUrlRef.current)
-          const url = URL.createObjectURL(msg.file)
-          musicUrlRef.current = url
           if (audioRef.current) {
-            audioRef.current.src = url
+            audioRef.current.src = msg.url
             void audioRef.current.play()
           }
           break
@@ -74,11 +70,6 @@ export default function OutputScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    return () => {
-      if (musicUrlRef.current) URL.revokeObjectURL(musicUrlRef.current)
-    }
-  }, [])
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center overflow-hidden">

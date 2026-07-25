@@ -13,13 +13,8 @@ import {
 } from 'lucide-react'
 import { useDeck } from './useDeck'
 import { usePresentChannel, type PresentMsg } from './channel'
-import { formatBytes } from '../lib'
-
-interface MusicItem {
-  id: string
-  file: File
-  name: string
-}
+import { useMediaLibrary } from '../hooks/useMediaLibrary'
+import { formatBytes, fileUrl, isAudio, type MediaFile } from '../lib'
 
 /**
  * 2스크린 — 조작 창. PPT 넘기기 · 영상 · 음악을 제어해 출력 창(1스크린)에 지시.
@@ -28,11 +23,15 @@ interface MusicItem {
 export default function ControlScreen() {
   const previewRef = useRef<HTMLDivElement>(null)
   const [file, setFile] = useState<File | null>(null)
-  const [music, setMusic] = useState<MusicItem[]>([])
   const [playingMusic, setPlayingMusic] = useState<string | null>(null)
   const [musicPaused, setMusicPaused] = useState(false)
 
   const deck = useDeck(file, previewRef)
+
+  // R2 라이브러리에서 오디오(mp3)만 골라 음악 목록으로 사용
+  const { files: libraryFiles, loading: musicLoading, error: musicError, refresh: refreshMusic } =
+    useMediaLibrary()
+  const music = libraryFiles.filter((f: MediaFile) => isAudio(f))
 
   // HELLO 응답에 필요한 최신값 참조
   const fileRef = useRef<File | null>(null)
@@ -84,9 +83,9 @@ export default function ControlScreen() {
   }, [])
 
   const playMusic = useCallback(
-    (m: MusicItem) => {
-      post({ type: 'MUSIC_PLAY', file: m.file, label: m.name })
-      setPlayingMusic(m.id)
+    (m: MediaFile) => {
+      post({ type: 'MUSIC_PLAY', url: fileUrl(m.key), label: m.name })
+      setPlayingMusic(m.key)
       setMusicPaused(false)
     },
     [post],
@@ -228,31 +227,21 @@ export default function ControlScreen() {
           <div className="bg-card rounded-2xl border border-border overflow-hidden">
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
               <span className="text-sm font-semibold flex items-center gap-2">
-                <Music className="w-4 h-4 text-success" /> 음악
+                <Music className="w-4 h-4 text-success" /> 음악 {music.length > 0 ? `· ${music.length}` : ''}
               </span>
-              <label className="text-xs text-primary font-semibold cursor-pointer hover:underline">
-                추가
-                <input
-                  type="file"
-                  accept="audio/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = [...(e.target.files ?? [])]
-                    setMusic((prev) => [
-                      ...prev,
-                      ...files.map((f) => ({ id: crypto.randomUUID(), file: f, name: f.name })),
-                    ])
-                    e.target.value = ''
-                  }}
-                />
-              </label>
+              <button
+                onClick={() => void refreshMusic()}
+                disabled={musicLoading}
+                className="text-xs text-primary font-semibold hover:underline disabled:opacity-40"
+              >
+                새로고침
+              </button>
             </div>
 
             {playingMusic && (
               <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 bg-success-soft/40">
                 <span className="text-xs text-muted-foreground flex-1 truncate">
-                  {music.find((m) => m.id === playingMusic)?.name}
+                  {music.find((m) => m.key === playingMusic)?.name}
                 </span>
                 <button onClick={toggleMusic} className="text-muted-foreground hover:text-foreground">
                   {musicPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
@@ -266,21 +255,34 @@ export default function ControlScreen() {
             <div className="max-h-56 overflow-y-auto divide-y divide-border">
               {music.map((m) => (
                 <button
-                  key={m.id}
+                  key={m.key}
                   onClick={() => playMusic(m)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-secondary transition-colors ${
-                    playingMusic === m.id ? 'bg-success-soft/50' : ''
+                    playingMusic === m.key ? 'bg-success-soft/50' : ''
                   }`}
                 >
                   <div className="w-8 h-8 rounded-lg bg-success-soft flex items-center justify-center shrink-0">
                     <Music className="w-4 h-4 text-success" />
                   </div>
-                  <p className="text-sm truncate flex-1">{m.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm truncate">{m.name}</p>
+                    {m.size > 0 && (
+                      <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(m.size)}</p>
+                    )}
+                  </div>
                   <Play className="w-4 h-4 text-muted-foreground shrink-0" />
                 </button>
               ))}
-              {music.length === 0 && (
-                <p className="px-4 py-3 text-xs text-muted-foreground">“추가”로 음악 파일을 넣으세요</p>
+              {musicLoading && music.length === 0 && (
+                <p className="px-4 py-3 text-xs text-muted-foreground">음악 불러오는 중…</p>
+              )}
+              {musicError && (
+                <p className="px-4 py-3 text-xs text-destructive">{musicError}</p>
+              )}
+              {!musicLoading && !musicError && music.length === 0 && (
+                <p className="px-4 py-3 text-xs text-muted-foreground">
+                  업로드된 음악(mp3)이 없습니다. 라이브러리에서 먼저 업로드하세요.
+                </p>
               )}
             </div>
           </div>

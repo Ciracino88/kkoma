@@ -10,7 +10,7 @@ export type PresentMsg =
   | { type: 'GOTO'; index: number } // 슬라이드 이동
   | { type: 'VIDEO_PLAY'; path: string } // 출력 창이 자기 deck 에서 해당 경로 영상 재생
   | { type: 'VIDEO_STOP' }
-  | { type: 'MUSIC_PLAY'; file: File; label: string }
+  | { type: 'MUSIC_PLAY'; url: string; label: string } // R2 파일 URL (창 간 유효)
   | { type: 'MUSIC_PAUSE' }
   | { type: 'MUSIC_RESUME' }
   | { type: 'MUSIC_STOP' }

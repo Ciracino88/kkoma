@@ -20,6 +20,13 @@ export function isVideo(file: Pick<MediaFile, 'name' | 'contentType'>): boolean 
   )
 }
 
+export function isAudio(file: Pick<MediaFile, 'name' | 'contentType'>): boolean {
+  return (
+    file.contentType.startsWith('audio/') ||
+    file.name.toLowerCase().endsWith('.mp3')
+  )
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   const units = ['KB', 'MB', 'GB', 'TB']
