@@ -192,7 +192,7 @@ Phase 0~2 초기 구현 완료(브랜치 `feat/presentation-controller`).
 
 ## 14.1 갱신 (2026-07-26) — 출력 개선 (`b2685e2`)
 
-- **출력 전체화면 채움 수정**: 렌더러 `fitMode:'contain'` 은 실제로 **컨테이너 *너비*에 맞춤**(높이 아님)이라, 기존의 `!important` 높이 강제 CSS와 충돌해 화면을 못 채웠음. 출력 스테이지를 슬라이드 원본 비율(`useDeck` 이 `slideWidth`/`slideHeight` 노출)의 **최대 사각형**(`width: min(100vw, calc(100vh * aspect))` + `aspect-ratio`)으로 잡아 CSS `object-fit:contain` 처럼 꽉 채움. 창 리사이즈/프로젝터 이동 시 vw/vh 갱신 + 렌더러 내부 ResizeObserver 로 자동 재맞춤.
+- **출력 전체화면 채움 수정**: 렌더러 `fitMode:'contain'` 은 실제로 **컨테이너 *너비*에 맞춤**(높이 아님)이라 기존 `!important` 높이 강제 CSS와 충돌해 화면을 못 채웠음. **최종 방식**(결정적): 슬라이드를 **원본 크기(`useDeck` 노출 `slideWidth`/`slideHeight`)로 렌더**한 뒤, `scale = min(창너비/w, 창높이/h)` 를 **직접 `transform: translate(-50%,-50%) scale()`** 로 적용해 중앙 레터박스로 꽉 채움. 렌더러 fit 내부 동작에 의존하지 않아 창 비율과 무관하게 정확하고, `window.resize` 로 재계산.
 - **영상 소스 확장**: PPT 내장 영상뿐 아니라 **로컬 파일·R2 라이브러리(mp4)** 재생. 채널 메시지 `VIDEO_PLAY_URL`(R2 URL, 창 간 유효)·`VIDEO_PLAY_FILE`(로컬 File 구조화 복제 → 출력 창에서 Blob URL 생성·해제) 추가.
 - **PPT/영상 모드 토글**: 출력 화면을 `ppt`/`video` 모드로 분리(채널 `MODE`). 컨트롤러에 세그먼트 토글 추가, **영상 재생 시 자동으로 영상 모드 전환**, "정지·PPT로" 로 복귀(복귀 시 영상 정지). HELLO 핸드셰이크에 현재 모드 재전송 포함. (기존 "영상 슬라이드 홀딩 화면"은 모드 기반 영상 화면으로 대체.)
 - **다음 슬라이드 미리보기**: 컨트롤러에서 현재+다음 슬라이드를 함께 확인. `useDeck.renderThumb`(렌더러 `renderThumbnailToContainer`)로 다음 슬라이드 썸네일 렌더.

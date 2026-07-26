@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Film } from 'lucide-react'
 import { useDeck } from './useDeck'
 import { usePresentChannel, type OutputMode, type PresentMsg } from './channel'
@@ -107,33 +107,53 @@ export default function OutputScreen() {
   // 언마운트 시 Blob URL 정리
   useEffect(() => revokeBlob, [revokeBlob])
 
-  // 슬라이드 원본 비율(가로/세로). 렌더러의 fitMode:'contain'은 "컨테이너 너비"에
-  // 맞추므로, 스테이지를 이 비율의 최대 사각형으로 잡아 화면을 꽉 채운다(레터박스).
-  const aspect =
-    deck.slideWidth > 0 && deck.slideHeight > 0 ? deck.slideWidth / deck.slideHeight : 16 / 9
+  // 슬라이드를 원본 크기로 렌더한 뒤, 화면에 꽉 차도록 직접 스케일한다(레터박스).
+  // 렌더러의 fitMode('contain'=너비 맞춤)에 의존하지 않아 창 비율과 무관하게 정확.
+  const hasSize = deck.slideWidth > 0 && deck.slideHeight > 0
+  const [scale, setScale] = useState(1)
+  useLayoutEffect(() => {
+    if (!hasSize) return
+    const compute = () =>
+      setScale(
+        Math.min(window.innerWidth / deck.slideWidth, window.innerHeight / deck.slideHeight),
+      )
+    compute()
+    window.addEventListener('resize', compute)
+    return () => window.removeEventListener('resize', compute)
+  }, [hasSize, deck.slideWidth, deck.slideHeight])
 
   const showSlides = mode === 'ppt'
 
   return (
-    <div className="h-screen w-screen bg-black text-white flex items-center justify-center overflow-hidden">
+    <div className="relative h-screen w-screen bg-black text-white overflow-hidden">
       {!file && mode === 'ppt' && (
-        <div className="text-center text-white/50">
-          <p className="text-xl">출력 창 · 연결됨</p>
-          <p className="text-sm mt-2">조작 창에서 PPT를 열면 여기에 표시됩니다</p>
+        <div className="absolute inset-0 flex items-center justify-center text-center text-white/50">
+          <div>
+            <p className="text-xl">출력 창 · 연결됨</p>
+            <p className="text-sm mt-2">조작 창에서 PPT를 열면 여기에 표시됩니다</p>
+          </div>
         </div>
       )}
 
-      {/* 슬라이드 스테이지: 화면 안에 들어가는, 비율 유지 최대 사각형 */}
+      {/* 슬라이드 스테이지: 원본 크기로 렌더 → 중앙에서 scale 로 화면 채움 */}
       <div
         ref={stageRef}
         style={{
           display: file && !deck.error && showSlides ? 'block' : 'none',
-          aspectRatio: aspect,
-          width: `min(100vw, calc(100vh * ${aspect}))`,
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          width: deck.slideWidth || '100vw',
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: 'center center',
         }}
       />
 
-      {deck.error && showSlides && <div className="text-destructive text-sm">{deck.error}</div>}
+      {deck.error && showSlides && (
+        <div className="absolute inset-0 flex items-center justify-center text-destructive text-sm">
+          {deck.error}
+        </div>
+      )}
 
       {/* 영상 모드 전체화면 */}
       {mode === 'video' && (

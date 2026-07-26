@@ -86,12 +86,10 @@ export function useDeck(file: File | null, containerRef: React.RefObject<HTMLDiv
    * 임의 슬라이드를 외부 컨테이너에 썸네일로 렌더(미리보기용).
    * 반환된 핸들은 호출자가 dispose 해야 한다.
    */
-  const renderThumb = useCallback((index: number, container: HTMLElement) => {
+  const renderThumb = useCallback((index: number, container: HTMLElement, width = 260) => {
     const v = viewerRef.current
     if (!v || index < 0 || index >= v.slideCount) return null
-    return v.renderThumbnailToContainer(index, container, {
-      width: container.clientWidth || 320,
-    })
+    return v.renderThumbnailToContainer(index, container, { width })
   }, [])
 
   return { ...state, goTo, renderThumb }

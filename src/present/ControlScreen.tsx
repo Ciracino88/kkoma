@@ -282,7 +282,7 @@ export default function ControlScreen() {
               <div className="p-3 flex items-center justify-center min-h-[120px]">
                 <div
                   ref={nextPreviewRef}
-                  className="w-full max-w-[280px] [&>*]:!w-full [&_*]:!max-w-full"
+                  className="overflow-hidden rounded-lg"
                   style={{ display: hasNext ? 'block' : 'none' }}
                 />
                 {!hasNext && <p className="text-xs text-muted-foreground">마지막 슬라이드입니다</p>}
