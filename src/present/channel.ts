@@ -5,10 +5,16 @@ import { useEffect, useRef } from 'react'
  * File/Blob 은 구조화 복제로 창 간 전달 가능(바이트 복사 없이 참조 공유).
  * 단, Blob URL 은 창마다 유효하지 않으므로 항상 원본 File 을 보내고 받는 창에서 URL 을 만든다.
  */
+/** 출력 창이 보여줄 화면. ppt = 슬라이드, video = 영상 */
+export type OutputMode = 'ppt' | 'video'
+
 export type PresentMsg =
   | { type: 'DECK'; file: File } // 새 PPT 로드
   | { type: 'GOTO'; index: number } // 슬라이드 이동
-  | { type: 'VIDEO_PLAY'; path: string } // 출력 창이 자기 deck 에서 해당 경로 영상 재생
+  | { type: 'MODE'; mode: OutputMode } // 출력 화면 모드 전환
+  | { type: 'VIDEO_PLAY'; path: string } // 출력 창이 자기 deck 에서 해당 경로 영상 재생(PPT 내장)
+  | { type: 'VIDEO_PLAY_URL'; url: string; label: string } // R2 영상 URL (창 간 유효)
+  | { type: 'VIDEO_PLAY_FILE'; file: File; label: string } // 로컬 영상 파일(구조화 복제)
   | { type: 'VIDEO_STOP' }
   | { type: 'MUSIC_PLAY'; url: string; label: string } // R2 파일 URL (창 간 유효)
   | { type: 'MUSIC_PAUSE' }

@@ -8,6 +8,9 @@ export interface DeckState {
   ready: boolean
   error: string | null
   media: DeckMedia | null
+  /** 슬라이드 원본 픽셀 크기 (비율 계산용) */
+  slideWidth: number
+  slideHeight: number
 }
 
 /**
@@ -22,6 +25,8 @@ export function useDeck(file: File | null, containerRef: React.RefObject<HTMLDiv
     ready: false,
     error: null,
     media: null,
+    slideWidth: 0,
+    slideHeight: 0,
   })
 
   useEffect(() => {
@@ -31,7 +36,7 @@ export function useDeck(file: File | null, containerRef: React.RefObject<HTMLDiv
     let viewer: PptxViewer | null = null
     let media: DeckMedia | null = null
 
-    setState({ slideCount: 0, current: 0, ready: false, error: null, media: null })
+    setState({ slideCount: 0, current: 0, ready: false, error: null, media: null, slideWidth: 0, slideHeight: 0 })
     ;(async () => {
       try {
         const buf = await file.arrayBuffer()
@@ -50,6 +55,8 @@ export function useDeck(file: File | null, containerRef: React.RefObject<HTMLDiv
           slideCount: viewer!.slideCount,
           current: viewer!.currentSlideIndex,
           ready: true,
+          slideWidth: viewer!.slideWidth,
+          slideHeight: viewer!.slideHeight,
         }))
 
         media = await extractDeckMedia(buf)
@@ -75,5 +82,17 @@ export function useDeck(file: File | null, containerRef: React.RefObject<HTMLDiv
     void v.goToSlide(Math.min(Math.max(0, index), v.slideCount - 1))
   }, [])
 
-  return { ...state, goTo }
+  /**
+   * 임의 슬라이드를 외부 컨테이너에 썸네일로 렌더(미리보기용).
+   * 반환된 핸들은 호출자가 dispose 해야 한다.
+   */
+  const renderThumb = useCallback((index: number, container: HTMLElement) => {
+    const v = viewerRef.current
+    if (!v || index < 0 || index >= v.slideCount) return null
+    return v.renderThumbnailToContainer(index, container, {
+      width: container.clientWidth || 320,
+    })
+  }, [])
+
+  return { ...state, goTo, renderThumb }
 }
