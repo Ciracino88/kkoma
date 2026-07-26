@@ -6,6 +6,7 @@ import {
   ExternalLink,
   FileUp,
   Film,
+  ListMusic,
   ListVideo,
   Music,
   Pause,
@@ -35,18 +36,21 @@ import {
 import { useMediaLibrary } from '../hooks/useMediaLibrary'
 import { formatBytes, isAudio, isVideo, type MediaFile } from '../lib'
 
+type Tab = 'video' | 'music'
+
 /**
  * 2스크린 — 조작 창. PPT 넘기기 · 영상 · 음악을 제어해 출력 창(1스크린)에 지시.
  * 자기 창에는 미리보기만 렌더한다(소리/영상 재생은 출력 창에서).
  *
- * 영상/음악은 소스(PPT 내장 · R2 라이브러리 · 로컬)에서 골라 담은 "재생목록(수동 큐)"으로 진행한다.
- * 목록 순서는 @dnd-kit 드래그로 바꾼다. 자동 연속재생은 하지 않고, 항목/다음 버튼으로 하나씩 재생.
+ * 사이드 패널은 영상/음악 탭으로 나뉘고, 각 탭은 "재생목록(수동 큐)" + "소스에서 추가"로 구성.
+ * 큐 순서는 @dnd-kit 드래그로 바꾸고, 자동 연속재생 없이 항목/다음 버튼으로 하나씩 재생한다.
  */
 export default function ControlScreen() {
   const previewRef = useRef<HTMLDivElement>(null)
   const nextPreviewRef = useRef<HTMLDivElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [outputMode, setOutputMode] = useState<OutputMode>('ppt')
+  const [tab, setTab] = useState<Tab>('video')
 
   // 재생목록(수동 큐)
   const [videoQueue, setVideoQueue] = useState<VideoItem[]>([])
@@ -219,11 +223,12 @@ export default function ControlScreen() {
       container.replaceChildren()
       return
     }
-    const handle = deck.renderThumb(nextIndex, container)
+    const handle = deck.renderThumb(nextIndex, container, 216)
     return () => handle?.dispose()
   }, [deck.ready, deck.current, deck.slideCount, deck.renderThumb])
 
   const hasNext = deck.ready && deck.current + 1 < deck.slideCount
+  const showNext = !!file && deck.slideCount > 0
   const embeddedVideos = deck.media?.all ?? []
   const inVideoQueue = (id: string) => videoQueue.some((v) => v.id === id)
   const inMusicQueue = (id: string) => musicQueue.some((m) => m.id === id)
@@ -233,6 +238,13 @@ export default function ControlScreen() {
     if (item.source.kind === 'library') return '라이브러리'
     return '로컬'
   }
+
+  const tabClass = (active: boolean, tone: 'info' | 'success') =>
+    `flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+      active
+        ? `bg-card shadow-sm ${tone === 'info' ? 'text-info' : 'text-success'}`
+        : 'text-muted-foreground hover:text-foreground'
+    }`
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -268,11 +280,11 @@ export default function ControlScreen() {
         </div>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-[1fr_360px] gap-4 p-4 sm:p-6">
+      <div className="flex-1 grid lg:grid-cols-[1fr_380px] gap-5 p-4 sm:p-6 items-start">
         {/* 슬라이드 미리보기 + 네비 */}
-        <section className="flex flex-col gap-3 min-w-0">
+        <section className="flex flex-col gap-3 min-w-0 lg:h-[calc(100vh-7rem)]">
           {/* 출력 화면 모드 토글 */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between shrink-0">
             <span className="text-xs font-medium text-muted-foreground">출력 화면</span>
             <div className="inline-flex bg-secondary rounded-lg p-1 gap-1">
               <button
@@ -298,348 +310,394 @@ export default function ControlScreen() {
             </div>
           </div>
 
-          <div className="relative flex-1 flex items-center justify-center bg-card rounded-2xl border border-border overflow-hidden min-h-[300px]">
-            {!file && (
-              <p className="text-sm text-muted-foreground">“PPT 열기”로 이번 주 예배 PPT를 선택하세요</p>
-            )}
-            <div
-              ref={previewRef}
-              className="w-full"
-              style={{ display: file && !deck.error ? 'block' : 'none' }}
-            />
-            {deck.error && <p className="text-sm text-destructive px-4">{deck.error}</p>}
-            {outputMode === 'video' && (
-              <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-info-soft text-info text-xs font-semibold px-2.5 py-1 rounded-full">
-                <Video className="w-3.5 h-3.5" /> 출력: 영상 모드
+          {/* 현재 슬라이드(좌, 크게) + 다음 슬라이드(우, 작게) 가로 배치 */}
+          <div
+            className={`flex-1 min-h-0 grid gap-3 items-stretch ${
+              showNext ? 'sm:grid-cols-[1fr_248px]' : 'grid-cols-1'
+            }`}
+          >
+            {/* 현재 슬라이드 + 네비 */}
+            <div className="flex flex-col gap-3 min-w-0 min-h-0">
+              <div className="relative flex-1 min-h-[280px] flex items-center justify-center bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                {!file && (
+                  <p className="text-sm text-muted-foreground px-4 text-center">
+                    “PPT 열기”로 이번 주 예배 PPT를 선택하세요
+                  </p>
+                )}
+                <div
+                  ref={previewRef}
+                  className="w-full"
+                  style={{ display: file && !deck.error ? 'block' : 'none' }}
+                />
+                {deck.error && <p className="text-sm text-destructive px-4">{deck.error}</p>}
+                <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-foreground/70 text-background text-xs font-semibold px-2.5 py-1 rounded-full">
+                  현재 슬라이드
+                </div>
+                {outputMode === 'video' && (
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-info-soft text-info text-xs font-semibold px-2.5 py-1 rounded-full">
+                    <Video className="w-3.5 h-3.5" /> 출력: 영상 모드
+                  </div>
+                )}
+              </div>
+
+              {deck.slideCount > 0 && (
+                <div className="flex items-center justify-center gap-4 shrink-0">
+                  <button
+                    onClick={() => goTo(deck.current - 1)}
+                    disabled={deck.current === 0}
+                    className="w-11 h-11 rounded-full bg-card shadow-sm border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-all"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm text-muted-foreground tabular-nums w-20 text-center">
+                    {deck.current + 1} / {deck.slideCount}
+                  </span>
+                  <button
+                    onClick={() => goTo(deck.current + 1)}
+                    disabled={deck.current === deck.slideCount - 1}
+                    className="w-11 h-11 rounded-full bg-card shadow-sm border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-all"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 다음 슬라이드 */}
+            {showNext && (
+              <div className="self-start flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                <div className="px-4 py-2 border-b border-border shrink-0">
+                  <span className="text-xs font-semibold text-muted-foreground">다음 슬라이드</span>
+                </div>
+                <div className="p-3 flex items-center justify-center min-h-[148px]">
+                  <div
+                    ref={nextPreviewRef}
+                    className="overflow-hidden rounded-lg"
+                    style={{ display: hasNext ? 'block' : 'none' }}
+                  />
+                  {!hasNext && (
+                    <p className="text-xs text-muted-foreground text-center">마지막 슬라이드입니다</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
-
-          {deck.slideCount > 0 && (
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={() => goTo(deck.current - 1)}
-                disabled={deck.current === 0}
-                className="w-11 h-11 rounded-full bg-card shadow-sm border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-all"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm text-muted-foreground tabular-nums w-20 text-center">
-                {deck.current + 1} / {deck.slideCount}
-              </span>
-              <button
-                onClick={() => goTo(deck.current + 1)}
-                disabled={deck.current === deck.slideCount - 1}
-                className="w-11 h-11 rounded-full bg-card shadow-sm border border-border flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-all"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          )}
-
-          {/* 다음 슬라이드 미리보기 */}
-          {file && deck.slideCount > 0 && (
-            <div className="bg-card rounded-2xl border border-border overflow-hidden">
-              <div className="px-4 py-2 border-b border-border">
-                <span className="text-xs font-semibold text-muted-foreground">다음 슬라이드</span>
-              </div>
-              <div className="p-3 flex items-center justify-center min-h-[120px]">
-                <div
-                  ref={nextPreviewRef}
-                  className="overflow-hidden rounded-lg"
-                  style={{ display: hasNext ? 'block' : 'none' }}
-                />
-                {!hasNext && <p className="text-xs text-muted-foreground">마지막 슬라이드입니다</p>}
-              </div>
-            </div>
-          )}
         </section>
 
-        {/* 사이드: 영상 · 음악 재생목록 */}
-        <aside className="flex flex-col gap-4">
-          {/* 영상 재생목록 */}
-          <div className="bg-card rounded-2xl border border-border overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <span className="text-sm font-semibold flex items-center gap-2">
-                <ListVideo className="w-4 h-4 text-info" /> 영상 재생목록
-                {videoQueue.length > 0 && (
-                  <span className="text-xs font-normal text-muted-foreground">· {videoQueue.length}</span>
-                )}
-              </span>
-              <button
-                onClick={playNextVideo}
-                disabled={videoQueue.length === 0}
-                className="flex items-center gap-1 text-xs font-semibold text-info hover:underline disabled:opacity-40 disabled:no-underline"
-              >
-                <SkipForward className="w-3.5 h-3.5" /> 다음
-              </button>
-            </div>
-
-            {/* 큐(수동 재생목록) — DnD 순서 변경 */}
-            <div className="p-2">
-              {videoQueue.length === 0 ? (
-                <p className="px-2 py-3 text-xs text-muted-foreground">
-                  아래 소스에서 영상을 담아 재생목록을 만드세요.
-                </p>
-              ) : (
-                <SortablePlaylist
-                  items={videoQueue}
-                  onReorder={setVideoQueue}
-                  renderItem={(item) => {
-                    const active = currentVideoId === item.id
-                    return (
-                      <div
-                        className={`flex items-center gap-2 pr-1 rounded-lg ${active ? 'bg-info-soft/60' : ''}`}
-                      >
-                        <button
-                          onClick={() => playVideo(item)}
-                          className="w-7 h-7 shrink-0 rounded-md flex items-center justify-center text-info hover:bg-info-soft transition-colors"
-                          title="재생"
-                        >
-                          {active ? <Video className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        </button>
-                        <div className="min-w-0 flex-1 py-1.5">
-                          <p className="text-sm truncate">{item.label}</p>
-                          <p className="text-xs text-muted-foreground tabular-nums truncate">
-                            {sourceBadge(item)}
-                            {item.size > 0 && ` · ${formatBytes(item.size)}`}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeVideo(item.id)}
-                          className="shrink-0 text-muted-foreground/60 hover:text-destructive p-1"
-                          title="목록에서 제거"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )
-                  }}
-                />
-              )}
-            </div>
-
-            {/* 소스에서 추가 */}
-            <div className="border-t border-border">
-              <p className="px-4 pt-2.5 pb-1 text-xs font-semibold text-muted-foreground">소스에서 추가</p>
-
-              {/* 로컬 영상 파일 */}
-              <label className="flex items-center gap-2 px-4 py-2.5 text-sm text-info font-semibold hover:bg-secondary transition-colors cursor-pointer">
-                <Upload className="w-4 h-4" /> 로컬 영상 파일 담기
-                <input
-                  type="file"
-                  accept="video/*,.mp4"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) addVideo(videoItemFromLocal(f))
-                    e.target.value = ''
-                  }}
-                />
-              </label>
-
-              <div className="max-h-56 overflow-y-auto divide-y divide-border border-t border-border">
-                {/* PPT 내장 영상 */}
-                {embeddedVideos.length > 0 && (
-                  <p className="px-4 pt-2 pb-1 text-xs font-medium text-muted-foreground">PPT 내장</p>
-                )}
-                {embeddedVideos.map((v) => {
-                  const added = inVideoQueue(embeddedId(v))
-                  return (
-                    <div key={v.path} className="flex items-center gap-3 px-4 py-2">
-                      <Film className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm truncate">{v.name}</p>
-                        <p className="text-xs text-muted-foreground tabular-nums">
-                          슬라이드 {v.slideIndex + 1}
-                          {v.sizeBytes > 0 && ` · ${formatBytes(v.sizeBytes)}`}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => addVideo(videoItemFromEmbedded(v))}
-                        disabled={added}
-                        className="shrink-0 text-info hover:bg-info-soft rounded-md p-1 disabled:opacity-30 disabled:hover:bg-transparent"
-                        title={added ? '이미 담김' : '재생목록에 담기'}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )
-                })}
-
-                {/* R2 라이브러리 영상 */}
-                {libraryVideos.length > 0 && (
-                  <p className="px-4 pt-2 pb-1 text-xs font-medium text-muted-foreground">
-                    라이브러리 · {libraryVideos.length}
-                  </p>
-                )}
-                {libraryVideos.map((v) => {
-                  const added = inVideoQueue(libraryVideoId(v))
-                  return (
-                    <div key={v.key} className="flex items-center gap-3 px-4 py-2">
-                      <div className="w-8 h-8 rounded-lg bg-info-soft flex items-center justify-center shrink-0">
-                        <Video className="w-4 h-4 text-info" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm truncate">{v.name}</p>
-                        {v.size > 0 && (
-                          <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(v.size)}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => addVideo(videoItemFromLibrary(v))}
-                        disabled={added}
-                        className="shrink-0 text-info hover:bg-info-soft rounded-md p-1 disabled:opacity-30 disabled:hover:bg-transparent"
-                        title={added ? '이미 담김' : '재생목록에 담기'}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )
-                })}
-
-                {!deck.media && file && (
-                  <p className="px-4 py-3 text-xs text-muted-foreground">PPT 내장 영상 확인 중…</p>
-                )}
-                {embeddedVideos.length === 0 && libraryVideos.length === 0 && !mediaLoading && (
-                  <p className="px-4 py-3 text-xs text-muted-foreground">
-                    담을 영상이 없습니다. 로컬 파일을 열거나 라이브러리에 mp4를 업로드하세요.
-                  </p>
-                )}
-              </div>
-            </div>
+        {/* 사이드: 영상/음악 탭 패널 */}
+        <aside className="flex flex-col gap-3 lg:sticky lg:top-24 lg:self-start lg:h-[calc(100vh-7rem)]">
+          {/* 탭 */}
+          <div className="inline-flex bg-secondary rounded-xl p-1 gap-1">
+            <button onClick={() => setTab('video')} className={tabClass(tab === 'video', 'info')}>
+              <ListVideo className="w-4 h-4" /> 영상
+              {videoQueue.length > 0 && <span className="text-xs font-normal opacity-70">· {videoQueue.length}</span>}
+            </button>
+            <button onClick={() => setTab('music')} className={tabClass(tab === 'music', 'success')}>
+              <ListMusic className="w-4 h-4" /> 음악
+              {musicQueue.length > 0 && <span className="text-xs font-normal opacity-70">· {musicQueue.length}</span>}
+            </button>
           </div>
 
-          {/* 음악 재생목록 */}
-          <div className="bg-card rounded-2xl border border-border overflow-hidden">
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-              <span className="text-sm font-semibold flex items-center gap-2">
-                <Music className="w-4 h-4 text-success" /> 음악 재생목록
-                {musicQueue.length > 0 && (
-                  <span className="text-xs font-normal text-muted-foreground">· {musicQueue.length}</span>
-                )}
-              </span>
-              <button
-                onClick={playNextMusic}
-                disabled={musicQueue.length === 0}
-                className="flex items-center gap-1 text-xs font-semibold text-success hover:underline disabled:opacity-40 disabled:no-underline"
-              >
-                <SkipForward className="w-3.5 h-3.5" /> 다음
-              </button>
-            </div>
+          <div className="flex-1 min-h-0 bg-card rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden">
+            {tab === 'video' ? (
+              /* ── 영상 패널 ─────────────────────────────── */
+              <>
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
+                  <span className="text-sm font-semibold flex items-center gap-2">
+                    <ListVideo className="w-4 h-4 text-info" /> 재생목록
+                  </span>
+                  <button
+                    onClick={playNextVideo}
+                    disabled={videoQueue.length === 0}
+                    className="flex items-center gap-1 rounded-lg bg-info-soft text-info px-2.5 py-1.5 text-xs font-semibold hover:brightness-95 disabled:opacity-40 disabled:bg-secondary disabled:text-muted-foreground transition"
+                  >
+                    <SkipForward className="w-3.5 h-3.5" /> 다음
+                  </button>
+                </div>
 
-            {/* 현재 재생 트랜스포트 */}
-            {playingMusicId && (
-              <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 bg-success-soft/40">
-                <span className="text-xs text-muted-foreground flex-1 truncate">
-                  {musicQueue.find((m) => m.id === playingMusicId)?.label}
-                </span>
-                <button onClick={toggleMusic} className="text-muted-foreground hover:text-foreground">
-                  {musicPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                </button>
-                <button onClick={stopMusic} className="text-muted-foreground hover:text-destructive">
-                  <Square className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            {/* 큐(수동 재생목록) — DnD 순서 변경 */}
-            <div className="p-2">
-              {musicQueue.length === 0 ? (
-                <p className="px-2 py-3 text-xs text-muted-foreground">
-                  아래 라이브러리에서 음악을 담아 재생목록을 만드세요.
-                </p>
-              ) : (
-                <SortablePlaylist
-                  items={musicQueue}
-                  onReorder={setMusicQueue}
-                  renderItem={(item) => {
-                    const active = playingMusicId === item.id
-                    return (
-                      <div
-                        className={`flex items-center gap-2 pr-1 rounded-lg ${active ? 'bg-success-soft/60' : ''}`}
-                      >
-                        <button
-                          onClick={() => playMusic(item)}
-                          className="w-7 h-7 shrink-0 rounded-md flex items-center justify-center text-success hover:bg-success-soft transition-colors"
-                          title="재생"
-                        >
-                          {active && !musicPaused ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        </button>
-                        <div className="min-w-0 flex-1 py-1.5">
-                          <p className="text-sm truncate">{item.label}</p>
-                          {item.size > 0 && (
-                            <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(item.size)}</p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => removeMusic(item.id)}
-                          className="shrink-0 text-muted-foreground/60 hover:text-destructive p-1"
-                          title="목록에서 제거"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )
-                  }}
-                />
-              )}
-            </div>
-
-            {/* 소스에서 추가: R2 라이브러리 mp3 */}
-            <div className="border-t border-border">
-              <div className="px-4 pt-2.5 pb-1 flex items-center justify-between">
-                <p className="text-xs font-semibold text-muted-foreground">
-                  라이브러리 음악{musicLibrary.length > 0 ? ` · ${musicLibrary.length}` : ''}
-                </p>
-                <button
-                  onClick={() => void refreshMedia()}
-                  disabled={mediaLoading}
-                  className="text-xs text-primary font-semibold hover:underline disabled:opacity-40"
-                >
-                  새로고침
-                </button>
-              </div>
-
-              <div className="max-h-52 overflow-y-auto divide-y divide-border border-t border-border">
-                {musicLibrary.map((m) => {
-                  const added = inMusicQueue(musicItemId(m))
-                  return (
-                    <div key={m.key} className="flex items-center gap-3 px-4 py-2">
-                      <div className="w-8 h-8 rounded-lg bg-success-soft flex items-center justify-center shrink-0">
-                        <Music className="w-4 h-4 text-success" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm truncate">{m.name}</p>
-                        {m.size > 0 && (
-                          <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(m.size)}</p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => addMusic(musicItemFromLibrary(m))}
-                        disabled={added}
-                        className="shrink-0 text-success hover:bg-success-soft rounded-md p-1 disabled:opacity-30 disabled:hover:bg-transparent"
-                        title={added ? '이미 담김' : '재생목록에 담기'}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
+                {/* 큐 — DnD 순서 변경 */}
+                <div className="flex-1 min-h-0 overflow-y-auto p-2">
+                  {videoQueue.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center gap-2 py-10 px-4 text-muted-foreground">
+                      <ListVideo className="w-8 h-8 opacity-30" />
+                      <p className="text-sm font-medium">재생목록이 비어 있어요</p>
+                      <p className="text-xs">아래 소스에서 영상을 담아보세요</p>
                     </div>
-                  )
-                })}
-                {mediaLoading && musicLibrary.length === 0 && (
-                  <p className="px-4 py-3 text-xs text-muted-foreground">음악 불러오는 중…</p>
+                  ) : (
+                    <SortablePlaylist
+                      items={videoQueue}
+                      onReorder={setVideoQueue}
+                      renderItem={(item) => {
+                        const active = currentVideoId === item.id
+                        return (
+                          <div
+                            className={`flex items-center gap-2 pr-1 rounded-lg transition-colors ${
+                              active ? 'bg-info-soft' : 'hover:bg-secondary'
+                            }`}
+                          >
+                            <button
+                              onClick={() => playVideo(item)}
+                              className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-info hover:bg-card transition-colors"
+                              title="재생"
+                            >
+                              {active ? <Video className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                            </button>
+                            <div className="min-w-0 flex-1 py-1.5">
+                              <p className="text-sm truncate leading-tight">{item.label}</p>
+                              <p className="text-xs text-muted-foreground tabular-nums truncate">
+                                {sourceBadge(item)}
+                                {item.size > 0 && ` · ${formatBytes(item.size)}`}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => removeVideo(item.id)}
+                              className="shrink-0 text-muted-foreground/50 hover:text-destructive p-1.5 rounded-md hover:bg-card transition-colors"
+                              title="목록에서 제거"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* 소스에서 추가 */}
+                <div className="border-t border-border shrink-0 flex flex-col max-h-[46%]">
+                  <div className="px-4 py-2 flex items-center justify-between shrink-0">
+                    <p className="text-xs font-semibold text-muted-foreground">소스에서 추가</p>
+                    <label className="flex items-center gap-1.5 text-xs text-info font-semibold hover:underline cursor-pointer">
+                      <Upload className="w-3.5 h-3.5" /> 로컬 파일
+                      <input
+                        type="file"
+                        accept="video/*,.mp4"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0]
+                          if (f) addVideo(videoItemFromLocal(f))
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="overflow-y-auto border-t border-border">
+                    {/* PPT 내장 영상 */}
+                    {embeddedVideos.length > 0 && (
+                      <p className="px-4 pt-2 pb-1 text-xs font-medium text-muted-foreground/80">PPT 내장</p>
+                    )}
+                    {embeddedVideos.map((v) => {
+                      const added = inVideoQueue(embeddedId(v))
+                      return (
+                        <div key={v.path} className="flex items-center gap-3 px-4 py-2 hover:bg-secondary/60 transition-colors">
+                          <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                            <Film className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm truncate leading-tight">{v.name}</p>
+                            <p className="text-xs text-muted-foreground tabular-nums">
+                              슬라이드 {v.slideIndex + 1}
+                              {v.sizeBytes > 0 && ` · ${formatBytes(v.sizeBytes)}`}
+                            </p>
+                          </div>
+                          <AddButton added={added} tone="info" onClick={() => addVideo(videoItemFromEmbedded(v))} />
+                        </div>
+                      )
+                    })}
+
+                    {/* R2 라이브러리 영상 */}
+                    {libraryVideos.length > 0 && (
+                      <p className="px-4 pt-2 pb-1 text-xs font-medium text-muted-foreground/80">
+                        라이브러리 · {libraryVideos.length}
+                      </p>
+                    )}
+                    {libraryVideos.map((v) => {
+                      const added = inVideoQueue(libraryVideoId(v))
+                      return (
+                        <div key={v.key} className="flex items-center gap-3 px-4 py-2 hover:bg-secondary/60 transition-colors">
+                          <div className="w-8 h-8 rounded-lg bg-info-soft flex items-center justify-center shrink-0">
+                            <Video className="w-4 h-4 text-info" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm truncate leading-tight">{v.name}</p>
+                            {v.size > 0 && (
+                              <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(v.size)}</p>
+                            )}
+                          </div>
+                          <AddButton added={added} tone="info" onClick={() => addVideo(videoItemFromLibrary(v))} />
+                        </div>
+                      )
+                    })}
+
+                    {!deck.media && file && (
+                      <p className="px-4 py-3 text-xs text-muted-foreground">PPT 내장 영상 확인 중…</p>
+                    )}
+                    {embeddedVideos.length === 0 && libraryVideos.length === 0 && !mediaLoading && (
+                      <p className="px-4 py-3 text-xs text-muted-foreground leading-relaxed">
+                        담을 영상이 없습니다. “로컬 파일”을 열거나 라이브러리에 mp4를 업로드하세요.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* ── 음악 패널 ─────────────────────────────── */
+              <>
+                <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
+                  <span className="text-sm font-semibold flex items-center gap-2">
+                    <ListMusic className="w-4 h-4 text-success" /> 재생목록
+                  </span>
+                  <button
+                    onClick={playNextMusic}
+                    disabled={musicQueue.length === 0}
+                    className="flex items-center gap-1 rounded-lg bg-success-soft text-success px-2.5 py-1.5 text-xs font-semibold hover:brightness-95 disabled:opacity-40 disabled:bg-secondary disabled:text-muted-foreground transition"
+                  >
+                    <SkipForward className="w-3.5 h-3.5" /> 다음
+                  </button>
+                </div>
+
+                {/* 현재 재생 트랜스포트 */}
+                {playingMusicId && (
+                  <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 bg-success-soft shrink-0">
+                    <Music className="w-4 h-4 text-success shrink-0" />
+                    <span className="text-xs text-foreground/80 flex-1 truncate">
+                      {musicQueue.find((m) => m.id === playingMusicId)?.label}
+                    </span>
+                    <button
+                      onClick={toggleMusic}
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-success hover:bg-card transition-colors"
+                    >
+                      {musicPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    </button>
+                    <button
+                      onClick={stopMusic}
+                      className="w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-card transition-colors"
+                    >
+                      <Square className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
-                {mediaError && <p className="px-4 py-3 text-xs text-destructive">{mediaError}</p>}
-                {!mediaLoading && !mediaError && musicLibrary.length === 0 && (
-                  <p className="px-4 py-3 text-xs text-muted-foreground">
-                    업로드된 음악(mp3)이 없습니다. 라이브러리에서 먼저 업로드하세요.
-                  </p>
-                )}
-              </div>
-            </div>
+
+                {/* 큐 — DnD 순서 변경 */}
+                <div className="flex-1 min-h-0 overflow-y-auto p-2">
+                  {musicQueue.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center gap-2 py-10 px-4 text-muted-foreground">
+                      <ListMusic className="w-8 h-8 opacity-30" />
+                      <p className="text-sm font-medium">재생목록이 비어 있어요</p>
+                      <p className="text-xs">아래 라이브러리에서 음악을 담아보세요</p>
+                    </div>
+                  ) : (
+                    <SortablePlaylist
+                      items={musicQueue}
+                      onReorder={setMusicQueue}
+                      renderItem={(item) => {
+                        const active = playingMusicId === item.id
+                        return (
+                          <div
+                            className={`flex items-center gap-2 pr-1 rounded-lg transition-colors ${
+                              active ? 'bg-success-soft' : 'hover:bg-secondary'
+                            }`}
+                          >
+                            <button
+                              onClick={() => playMusic(item)}
+                              className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-success hover:bg-card transition-colors"
+                              title="재생"
+                            >
+                              {active && !musicPaused ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                            </button>
+                            <div className="min-w-0 flex-1 py-1.5">
+                              <p className="text-sm truncate leading-tight">{item.label}</p>
+                              {item.size > 0 && (
+                                <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(item.size)}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeMusic(item.id)}
+                              className="shrink-0 text-muted-foreground/50 hover:text-destructive p-1.5 rounded-md hover:bg-card transition-colors"
+                              title="목록에서 제거"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* 소스에서 추가: R2 라이브러리 mp3 */}
+                <div className="border-t border-border shrink-0 flex flex-col max-h-[46%]">
+                  <div className="px-4 py-2 flex items-center justify-between shrink-0">
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      라이브러리 음악{musicLibrary.length > 0 ? ` · ${musicLibrary.length}` : ''}
+                    </p>
+                    <button
+                      onClick={() => void refreshMedia()}
+                      disabled={mediaLoading}
+                      className="text-xs text-primary font-semibold hover:underline disabled:opacity-40"
+                    >
+                      새로고침
+                    </button>
+                  </div>
+
+                  <div className="overflow-y-auto border-t border-border">
+                    {musicLibrary.map((m) => {
+                      const added = inMusicQueue(musicItemId(m))
+                      return (
+                        <div key={m.key} className="flex items-center gap-3 px-4 py-2 hover:bg-secondary/60 transition-colors">
+                          <div className="w-8 h-8 rounded-lg bg-success-soft flex items-center justify-center shrink-0">
+                            <Music className="w-4 h-4 text-success" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm truncate leading-tight">{m.name}</p>
+                            {m.size > 0 && (
+                              <p className="text-xs text-muted-foreground tabular-nums">{formatBytes(m.size)}</p>
+                            )}
+                          </div>
+                          <AddButton added={added} tone="success" onClick={() => addMusic(musicItemFromLibrary(m))} />
+                        </div>
+                      )
+                    })}
+                    {mediaLoading && musicLibrary.length === 0 && (
+                      <p className="px-4 py-3 text-xs text-muted-foreground">음악 불러오는 중…</p>
+                    )}
+                    {mediaError && <p className="px-4 py-3 text-xs text-destructive">{mediaError}</p>}
+                    {!mediaLoading && !mediaError && musicLibrary.length === 0 && (
+                      <p className="px-4 py-3 text-xs text-muted-foreground leading-relaxed">
+                        업로드된 음악(mp3)이 없습니다. 라이브러리에서 먼저 업로드하세요.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </aside>
       </div>
     </div>
+  )
+}
+
+/** 소스 항목을 재생목록에 담는 + 버튼. 이미 담긴 항목은 비활성. */
+function AddButton({
+  added,
+  tone,
+  onClick,
+}: {
+  added: boolean
+  tone: 'info' | 'success'
+  onClick: () => void
+}) {
+  const toneClass = tone === 'info' ? 'text-info hover:bg-info-soft' : 'text-success hover:bg-success-soft'
+  return (
+    <button
+      onClick={onClick}
+      disabled={added}
+      className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors disabled:opacity-30 disabled:hover:bg-transparent ${toneClass}`}
+      title={added ? '이미 담김' : '재생목록에 담기'}
+    >
+      <Plus className="w-4 h-4" />
+    </button>
   )
 }
