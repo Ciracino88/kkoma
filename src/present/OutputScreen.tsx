@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Film } from 'lucide-react'
+import { Film, Maximize, Minimize } from 'lucide-react'
 import { useDeck } from './useDeck'
 import { usePresentChannel, type OutputMode, type PresentMsg } from './channel'
 
@@ -122,6 +122,40 @@ export default function OutputScreen() {
     return () => window.removeEventListener('resize', compute)
   }, [hasSize, deck.slideWidth, deck.slideHeight])
 
+  // 전체화면(프로젝터 송출용). Fullscreen API 는 이 창의 사용자 제스처로만 호출 가능.
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showFsBtn, setShowFsBtn] = useState(true)
+  const hideTimerRef = useRef<number | null>(null)
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {})
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => {})
+    }
+  }, [])
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  // 관객 화면이므로 전체화면 버튼은 마우스가 멈추면 자동으로 숨긴다.
+  useEffect(() => {
+    const reveal = () => {
+      setShowFsBtn(true)
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = window.setTimeout(() => setShowFsBtn(false), 2500)
+    }
+    reveal()
+    window.addEventListener('mousemove', reveal)
+    return () => {
+      window.removeEventListener('mousemove', reveal)
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+    }
+  }, [])
+
   const showSlides = mode === 'ppt'
 
   return (
@@ -169,6 +203,18 @@ export default function OutputScreen() {
           )}
         </div>
       )}
+
+      {/* 전체화면 토글 (마우스 멈추면 자동 숨김) */}
+      <button
+        onClick={toggleFullscreen}
+        title={isFullscreen ? '전체화면 나가기 (Esc)' : '전체화면'}
+        className={`fixed top-4 right-4 z-[70] flex items-center gap-2 rounded-lg bg-white/10 hover:bg-white/25 backdrop-blur px-3 py-2 text-sm text-white/90 transition-opacity ${
+          showFsBtn ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+        {isFullscreen ? '나가기' : '전체화면'}
+      </button>
 
       {/* 음악 (숨김) */}
       <audio ref={audioRef} />
