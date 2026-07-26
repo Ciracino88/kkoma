@@ -12,6 +12,13 @@ import { UploadDropzone } from './components/UploadDropzone'
 import { UploadList } from './components/UploadList'
 import { Toolbar } from './components/Toolbar'
 import { FileTable } from './components/FileTable'
+import { ConfirmDialog } from './components/ConfirmDialog'
+
+interface Confirm {
+  title: string
+  detail?: string
+  onConfirm: () => void
+}
 
 export default function App() {
   const { files, loading, error, refresh, removeOne, removeMany } = useMediaLibrary()
@@ -23,6 +30,7 @@ export default function App() {
   const [isDragging, setIsDragging] = useState(false)
   const [playingKey, setPlayingKey] = useState<string | null>(null)
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [confirm, setConfirm] = useState<Confirm | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const openPicker = useCallback(() => fileInputRef.current?.click(), [])
@@ -92,6 +100,33 @@ export default function App() {
     }
   }, [selectedKeys, removeMany, toast])
 
+  const requestDeleteOne = useCallback(
+    (file: MediaFile) => {
+      setConfirm({
+        title: `"${file.name}" 파일을 삭제할까요?`,
+        detail: '삭제한 파일은 복구할 수 없습니다.',
+        onConfirm: () => {
+          setConfirm(null)
+          void deleteOne(file)
+        },
+      })
+    },
+    [deleteOne],
+  )
+
+  const requestDeleteSelected = useCallback(() => {
+    const count = selectedKeys.size
+    if (count === 0) return
+    setConfirm({
+      title: `선택한 ${count}개 파일을 삭제할까요?`,
+      detail: '삭제한 파일은 복구할 수 없습니다.',
+      onConfirm: () => {
+        setConfirm(null)
+        void deleteSelected()
+      },
+    })
+  }, [selectedKeys, deleteSelected])
+
   const totalStorage = useMemo(() => files.reduce((sum, f) => sum + f.size, 0), [files])
   const mp3Count = useMemo(() => files.filter((f) => !isVideo(f)).length, [files])
   const mp4Count = files.length - mp3Count
@@ -146,7 +181,7 @@ export default function App() {
           onFilter={setFilter}
           onRefresh={() => void refresh()}
           selectedCount={selectedKeys.size}
-          onDeleteSelected={() => void deleteSelected()}
+          onDeleteSelected={requestDeleteSelected}
         />
         <FileTable
           loading={loading}
@@ -157,9 +192,17 @@ export default function App() {
           playingKey={playingKey}
           onToggleSelect={toggleSelect}
           onTogglePlay={togglePlay}
-          onDelete={(file) => void deleteOne(file)}
+          onDelete={requestDeleteOne}
         />
       </main>
+
+      <ConfirmDialog
+        open={confirm !== null}
+        title={confirm?.title ?? ''}
+        detail={confirm?.detail}
+        onConfirm={() => confirm?.onConfirm()}
+        onCancel={() => setConfirm(null)}
+      />
     </div>
   )
 }
